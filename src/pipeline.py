@@ -47,6 +47,7 @@ def run_one_date(date_str: str, config: Config) -> dict:
 
     status, error_msg = "SUCCESS", None
     try:
+        print("\n===***CHECKPOINT 1 EXECUTES***===\n")
         # ── Bronze ────────────────────────────────────────────────────────────
         stage("ingest_orders",    lambda: ingest_orders(
             date_str, config.landing_orders, config.bronze, logger))
