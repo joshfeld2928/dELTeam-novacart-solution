@@ -32,7 +32,7 @@ def main():
     run([py, "-m", "pytest", "-v"],
         "Step 3: Run test suite")
 
-    print("\n✓ All steps complete. Check data/ for pipeline output.")
+    print("\nAll steps complete. Check data/ for pipeline output.")
 
 
 if __name__ == "__main__":
