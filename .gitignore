@@ -1,3 +1,27 @@
+﻿# -- OS / editor noise --------------------------------------------------------
 .DS_Store
 .claude/
 Technical Docs/
+
+# -- Python cache and compiled files ------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+
+# -- Virtual environment ------------------------------------------------------
+.venv/
+venv/
+env/
+
+# -- Pipeline-generated output ------------------------------------------------
+data/bronze/
+data/silver/
+data/gold/
+data/quarantine/
+
+# -- Logs and run state -------------------------------------------------------
+logs/
+state/
+
+# -- pytest cache -------------------------------------------------------------
+.pytest_cache/
