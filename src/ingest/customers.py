@@ -4,12 +4,16 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from src.utils.exceptions import IngestionError
 from src.utils.logging_setup import log_event
-from src.transform.schema_check import check_schema
+from src.transform.schema_check import check_schema, DriftResult
+
+if TYPE_CHECKING:
+    from src.utils.state import StateManager
 
 EXPECTED_COLUMNS = [
     "customer_id", "first_name", "last_name", "email",
@@ -21,8 +25,9 @@ def ingest_customers(
     landing_dir: Path,
     bronze_dir: Path,
     logger: logging.Logger,
-) -> Path:
-    """Flatten nested JSON export and write to Bronze. Returns output path."""
+    state: "StateManager | None" = None,
+) -> tuple[Path, DriftResult]:
+    """Flatten nested JSON export and write to Bronze. Returns (output path, drift result)."""
     src = landing_dir / "customers.json"
     if not src.exists():
         raise IngestionError(f"customers file not found: {src}")
@@ -40,15 +45,17 @@ def ingest_customers(
     df = pd.DataFrame(rows)
     log_event(logger, "INFO", "customers_ingested", rows=len(df))
 
-    check_schema(list(df.columns), EXPECTED_COLUMNS, "customers", logger)
+    drift = check_schema(list(df.columns), EXPECTED_COLUMNS, "customers", logger, state)
 
     df["_source_file"] = src.name
     df["_ingested_at"] = datetime.now(timezone.utc).isoformat()
+    df["_schema_version"] = drift.schema_version or "unknown"
 
     out_dir = bronze_dir / "customers"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "data.parquet"
     df.to_parquet(out_path, index=False)
 
-    log_event(logger, "INFO", "customers_bronze_written", path=str(out_path), rows=len(df))
-    return out_path
+    log_event(logger, "INFO", "customers_bronze_written", path=str(out_path), rows=len(df),
+              schema_version=drift.schema_version)
+    return out_path, drift

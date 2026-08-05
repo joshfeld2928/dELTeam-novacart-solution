@@ -10,7 +10,7 @@ import pandas as pd
 from src.utils.exceptions import IngestionError
 from src.utils.logging_setup import log_event
 from src.utils.state import StateManager
-from src.transform.schema_check import check_schema
+from src.transform.schema_check import check_schema, DriftResult
 
 EXPECTED_COLUMNS = [
     "product_id", "name", "category", "unit_cost", "supplier_id", "updated_at",
@@ -23,10 +23,11 @@ def ingest_products(
     bronze_dir: Path,
     state: StateManager,
     logger: logging.Logger,
-) -> Path:
+) -> tuple[Path, DriftResult]:
     """
     Incrementally load only rows newer than the stored watermark.
     Advances the watermark after a successful write.
+    Returns (output path, drift result).
     """
     if not db_path.exists():
         raise IngestionError(f"products DB not found: {db_path}")
@@ -50,11 +51,14 @@ def ingest_products(
         log_event(logger, "INFO", "products_no_new_rows")
         out_dir = bronze_dir / "products"
         out_dir.mkdir(parents=True, exist_ok=True)
-        return out_dir / "data.parquet"
+        # No rows to process — retrieve current version without drift detection
+        current_version, _ = state.get_current_schema_version("products") if state else (None, [])
+        return out_dir / "data.parquet", DriftResult(source_name="products", schema_version=current_version)
 
-    check_schema(list(df.columns), EXPECTED_COLUMNS, "products", logger)
+    drift = check_schema(list(df.columns), EXPECTED_COLUMNS, "products", logger, state)
 
     df["_ingested_at"] = datetime.now(timezone.utc).isoformat()
+    df["_schema_version"] = drift.schema_version or "unknown"
 
     out_dir = bronze_dir / "products"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -63,6 +67,7 @@ def ingest_products(
 
     new_watermark = str(df["updated_at"].max())
     state.set_watermark(WATERMARK_KEY, new_watermark)
-    log_event(logger, "INFO", "products_watermark_advanced", new_watermark=new_watermark)
+    log_event(logger, "INFO", "products_watermark_advanced", new_watermark=new_watermark,
+              schema_version=drift.schema_version)
 
-    return out_path
+    return out_path, drift

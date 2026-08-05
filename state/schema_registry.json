@@ -1,0 +1,50 @@
+{
+  "orders": {
+    "v1": {
+      "columns": [
+        "customer_id",
+        "order_date",
+        "order_id",
+        "product_id",
+        "quantity",
+        "status",
+        "unit_price"
+      ],
+      "added": [],
+      "removed": [],
+      "registered_at": "2026-08-05T01:23:08.130969+00:00"
+    }
+  },
+  "customers": {
+    "v1": {
+      "columns": [
+        "city",
+        "country",
+        "customer_id",
+        "email",
+        "first_name",
+        "last_name",
+        "signup_date",
+        "tier"
+      ],
+      "added": [],
+      "removed": [],
+      "registered_at": "2026-08-05T01:23:08.731435+00:00"
+    }
+  },
+  "products": {
+    "v1": {
+      "columns": [
+        "category",
+        "name",
+        "product_id",
+        "supplier_id",
+        "unit_cost",
+        "updated_at"
+      ],
+      "added": [],
+      "removed": [],
+      "registered_at": "2026-08-05T01:23:08.781044+00:00"
+    }
+  }
+}

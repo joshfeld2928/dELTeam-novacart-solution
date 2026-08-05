@@ -113,7 +113,7 @@ def test_bad_rows_dont_reach_gold(config: Config):
 # ── Scenario 4: Additive schema drift ────────────────────────────────────────
 
 def test_additive_drift_succeeds(config: Config):
-    """Extra column in source → pipeline continues, column ignored."""
+    """Extra column in source → pipeline continues with SUCCESS_WITH_DRIFT and drift_events recorded."""
     path = config.landing_orders / f"orders_{DATE}.csv"
     import csv
     with path.open("w", newline="") as f:
@@ -125,7 +125,9 @@ def test_additive_drift_succeeds(config: Config):
     make_products_db(config.landing_products_db, [GOOD_PRODUCT])
 
     result = run_one_date(DATE, config)
-    assert result["status"] == "SUCCESS"
+    assert result["status"] == "SUCCESS_WITH_DRIFT"
+    assert any(e["source"] == "orders" and "new_mystery_column" in e["added"]
+               for e in result["drift_events"])
 
 
 def test_additive_drift_data_still_lands(config: Config):

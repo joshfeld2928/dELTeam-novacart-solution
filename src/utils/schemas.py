@@ -1,4 +1,10 @@
-"""Pydantic schema contracts for Bronze → Silver validation."""
+"""Pydantic schema contracts for Bronze → Silver validation.
+
+All models use extra='allow' to support schema evolution — new columns from
+upstream are passed through rather than blocked. Pydantic's role here is
+data quality validation (values, types, required fields), not structural
+gatekeeping (that is handled by check_schema / the schema registry).
+"""
 from __future__ import annotations
 from datetime import date
 from typing import Optional
@@ -6,7 +12,7 @@ from pydantic import BaseModel, field_validator, ConfigDict
 
 
 class OrderRow(BaseModel):
-    model_config = ConfigDict(coerce_numbers_to_str=False)
+    model_config = ConfigDict(coerce_numbers_to_str=False, extra="allow")
 
     order_id: str
     customer_id: str
@@ -40,6 +46,8 @@ class OrderRow(BaseModel):
 
 
 class CustomerRow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     customer_id: str
     first_name: str
     last_name: str
@@ -58,6 +66,8 @@ class CustomerRow(BaseModel):
 
 
 class ProductRow(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     product_id: str
     name: str
     category: str

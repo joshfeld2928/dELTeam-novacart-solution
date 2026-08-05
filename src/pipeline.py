@@ -33,26 +33,41 @@ def run_one_date(date_str: str, config: Config) -> dict:
     state = StateManager(config.state)
     started_at = datetime.utcnow()
     stages: list[dict] = []
+    drift_events: list[dict] = []
 
     def stage(name: str, fn):
         t0 = datetime.utcnow()
         try:
-            fn()
+            result = fn()
             stages.append({"stage": name, "status": "OK",
                            "duration_sec": (datetime.utcnow() - t0).total_seconds()})
+            return result
         except Exception as exc:
             stages.append({"stage": name, "status": "FAIL", "error": str(exc),
                            "duration_sec": (datetime.utcnow() - t0).total_seconds()})
             raise
 
+    def ingest_stage(name: str, fn):
+        """Like stage(), but also captures DriftResult from ingest functions."""
+        result = stage(name, fn)
+        if result is not None:
+            _, drift = result
+            if drift.has_drift:
+                drift_events.append({
+                    "source": drift.source_name,
+                    "schema_version": drift.schema_version,
+                    "added": drift.added,
+                    "removed": drift.removed,
+                })
+
     status, error_msg = "SUCCESS", None
     try:
         # ── Bronze ────────────────────────────────────────────────────────────
-        stage("ingest_orders",    lambda: ingest_orders(
-            date_str, config.landing_orders, config.bronze, logger))
-        stage("ingest_customers", lambda: ingest_customers(
-            config.landing_customers, config.bronze, logger))
-        stage("ingest_products",  lambda: ingest_products(
+        ingest_stage("ingest_orders",    lambda: ingest_orders(
+            date_str, config.landing_orders, config.bronze, logger, state))
+        ingest_stage("ingest_customers", lambda: ingest_customers(
+            config.landing_customers, config.bronze, logger, state))
+        ingest_stage("ingest_products",  lambda: ingest_products(
             config.landing_products_db, config.bronze, state, logger))
 
         # ── Silver ────────────────────────────────────────────────────────────
@@ -77,6 +92,9 @@ def run_one_date(date_str: str, config: Config) -> dict:
         status = "FAIL"
         error_msg = str(exc)
 
+    if drift_events and status == "SUCCESS":
+        status = "SUCCESS_WITH_DRIFT"
+
     finished_at = datetime.utcnow()
     metadata = {
         "date": date_str,
@@ -85,6 +103,7 @@ def run_one_date(date_str: str, config: Config) -> dict:
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_sec": (finished_at - started_at).total_seconds(),
+        "drift_events": drift_events,
         "stages": stages,
     }
     state.record_run(metadata)

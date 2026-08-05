@@ -15,16 +15,25 @@ from src.utils.schemas import OrderRow, CustomerRow, ProductRow
 def _validate_df(
     df: pd.DataFrame,
     model: Type[BaseModel],
+    required_fields: list[str],
     primary_key: str,
     quarantine_path: Path,
     logger: logging.Logger,
     source_name: str,
 ) -> pd.DataFrame:
-    """Validate each row with Pydantic. Good rows → Silver, bad rows → quarantine."""
+    """Validate each row with Pydantic. Good rows → Silver, bad rows → quarantine.
+
+    Only required_fields are passed to Pydantic for data-quality validation.
+    All other columns (including new upstream additions) are carried forward
+    untouched — schema gatekeeping is handled upstream by check_schema().
+    """
     good, bad = [], []
     for _, row in df.iterrows():
         try:
-            model(**row.to_dict())
+            # Pass only the required fields to Pydantic — data quality check only.
+            # Extra columns are preserved in the original row and passed through.
+            required_data = {k: row[k] for k in required_fields if k in row.index}
+            model(**required_data)
             good.append(row)
         except (ValidationError, Exception) as exc:
             row_dict = row.to_dict()
@@ -52,6 +61,11 @@ def _validate_df(
     return result.reset_index(drop=True)
 
 
+_ORDER_FIELDS    = ["order_id", "customer_id", "product_id", "order_date", "quantity", "unit_price", "status"]
+_CUSTOMER_FIELDS = ["customer_id", "first_name", "last_name", "email", "city", "country", "signup_date", "tier"]
+_PRODUCT_FIELDS  = ["product_id", "name", "category", "unit_cost", "supplier_id", "updated_at"]
+
+
 def build_silver_orders(
     date_str: str,
     bronze_dir: Path,
@@ -65,7 +79,7 @@ def build_silver_orders(
         return silver_dir / "orders" / f"date={date_str}" / "data.parquet"
 
     df = pd.read_parquet(src)
-    df = _validate_df(df, OrderRow, "order_id", quarantine_dir, logger, "orders")
+    df = _validate_df(df, OrderRow, _ORDER_FIELDS, "order_id", quarantine_dir, logger, "orders")
 
     out_dir = silver_dir / "orders" / f"date={date_str}"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -87,7 +101,7 @@ def build_silver_customers(
         return silver_dir / "customers" / "data.parquet"
 
     df = pd.read_parquet(src)
-    df = _validate_df(df, CustomerRow, "customer_id", quarantine_dir, logger, "customers")
+    df = _validate_df(df, CustomerRow, _CUSTOMER_FIELDS, "customer_id", quarantine_dir, logger, "customers")
 
     out_dir = silver_dir / "customers"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -112,7 +126,7 @@ def build_silver_products(
     if df.empty:
         return silver_dir / "products" / "data.parquet"
 
-    df = _validate_df(df, ProductRow, "product_id", quarantine_dir, logger, "products")
+    df = _validate_df(df, ProductRow, _PRODUCT_FIELDS, "product_id", quarantine_dir, logger, "products")
 
     out_dir = silver_dir / "products"
     out_dir.mkdir(parents=True, exist_ok=True)
