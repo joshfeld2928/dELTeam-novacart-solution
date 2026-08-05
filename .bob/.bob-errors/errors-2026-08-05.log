@@ -1,0 +1,22 @@
+
+================================================================================
+ERROR LOGGED: 2026-08-05T21:44:17.949Z
+User ID: Joshua.Feld@ibm.com
+================================================================================
+Error Name: GatewayError
+Error Message: Request failed after 6 attempts: fetch failed
+
+Stack Trace:
+GatewayError: Request failed after 6 attempts: fetch failed
+    at t.fetch (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:777:4791)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async t.createChatCompletion (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:777:8903)
+    at async oit.createChatCompletionWithTokenRenewal (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:2152:235)
+    at async oit.generateContentStreamInternal (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:2157:52)
+    at async _3.loggingStreamWrapper (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:800:31296)
+    at async MY.processStreamResponse (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:2463:81)
+    at async file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:2457:22044
+    at async sG.run (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:2463:3153)
+    at async Bwe.sendMessageStream (file:///Users/joshuafeld/.nvm/versions/node/v26.5.0/lib/node_modules/bobshell/bundle/bob.js:2796:511)
+================================================================================
+

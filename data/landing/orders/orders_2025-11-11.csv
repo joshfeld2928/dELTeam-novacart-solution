@@ -1,0 +1,7 @@
+order_id,customer_id,product_id,order_date,quantity,unit_price,status
+ORD-016,CUST-001,PROD-004,2025-11-11,2,89.99,shipped
+ORD-017,CUST-003,PROD-002,2025-11-11,1,199.00,pending
+ORD-018,CUST-002,PROD-003,2025-11-11,3,29.99,delivered
+ORD-019,CUST-004,PROD-001,2025-11-11,5,49.99,shipped
+ORD-020,CUST-005,PROD-004,2025-11-11,1,89.99,pending
+ORD-021,CUST-001,PROD-003,2025-11-11,2,29.99,delivered

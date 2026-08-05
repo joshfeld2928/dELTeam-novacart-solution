@@ -1,0 +1,2 @@
+order_id,customer_id,product_id,order_date,quantity,unit_price,status
+ORD-098,CUST-002,PROD-004,2025-11-27,1,89.99,pending
