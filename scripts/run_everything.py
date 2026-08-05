@@ -1,6 +1,9 @@
 """
 Cross-platform end-to-end runner. Works on macOS, Linux, and Windows.
 Usage: python scripts/run_everything.py
+
+Activate Environment:
+python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 """
 from __future__ import annotations
 import subprocess
@@ -37,3 +40,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+""

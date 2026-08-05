@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Pydantic schema contracts for Bronze → Silver validation.
 
 All models use extra='allow' to support schema evolution — new columns from
@@ -5,12 +6,18 @@ upstream are passed through rather than blocked. Pydantic's role here is
 data quality validation (values, types, required fields), not structural
 gatekeeping (that is handled by check_schema / the schema registry).
 """
+=======
+"""Pydantic schema contracts for Bronze → Silver validation."""
+# • Import required libraries for data validation and type checking
+>>>>>>> 1ae1e6d7c94be31b0784f2529d9f64ce4bf779c7
 from __future__ import annotations
 from datetime import date
 from typing import Optional
 from pydantic import BaseModel, field_validator, ConfigDict
 
 
+# • Define order record schema with strict type validation
+# • Configure model to prevent automatic number-to-string coercion
 class OrderRow(BaseModel):
     model_config = ConfigDict(coerce_numbers_to_str=False, extra="allow")
 
@@ -22,6 +29,7 @@ class OrderRow(BaseModel):
     unit_price: float
     status: str
 
+    # • Validate quantity is positive (business rule: no zero or negative orders)
     @field_validator("quantity")
     @classmethod
     def qty_positive(cls, v: int) -> int:
@@ -29,6 +37,7 @@ class OrderRow(BaseModel):
             raise ValueError(f"quantity must be > 0, got {v}")
         return v
 
+    # • Validate unit price is non-negative (business rule: no negative pricing)
     @field_validator("unit_price")
     @classmethod
     def price_positive(cls, v: float) -> float:
@@ -36,6 +45,8 @@ class OrderRow(BaseModel):
             raise ValueError(f"unit_price must be >= 0, got {v}")
         return v
 
+    # • Validate status against allowed values
+    # • Normalize status to lowercase for consistency
     @field_validator("status")
     @classmethod
     def valid_status(cls, v: str) -> str:
@@ -45,6 +56,8 @@ class OrderRow(BaseModel):
         return v.lower()
 
 
+# • Define customer record schema with optional tier field
+# • Default tier to "standard" if not provided
 class CustomerRow(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -56,7 +69,10 @@ class CustomerRow(BaseModel):
     country: str
     signup_date: date
     tier: Optional[str] = "standard"
+    past_addresses: Optional[list] = []
 
+    # • Validate email contains @ symbol (basic format check)
+    # • Normalize email to lowercase for consistency
     @field_validator("email")
     @classmethod
     def email_has_at(cls, v: str) -> str:
@@ -65,6 +81,8 @@ class CustomerRow(BaseModel):
         return v.lower()
 
 
+# • Define product record schema
+# • Store updated_at as ISO string from SQLite timestamp
 class ProductRow(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -75,6 +93,7 @@ class ProductRow(BaseModel):
     supplier_id: str
     updated_at: str  # ISO string from SQLite
 
+    # • Validate unit cost is non-negative (business rule: no negative costs)
     @field_validator("unit_cost")
     @classmethod
     def cost_non_negative(cls, v: float) -> float:
