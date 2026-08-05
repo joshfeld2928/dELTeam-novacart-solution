@@ -38,6 +38,7 @@ def ingest_customers(
         rows.append(rec)
 
     df = pd.DataFrame(rows)
+    df["past_addresses"] = [[] for _ in range(len(df))]
     log_event(logger, "INFO", "customers_ingested", rows=len(df))
 
     check_schema(list(df.columns), EXPECTED_COLUMNS, "customers", logger)

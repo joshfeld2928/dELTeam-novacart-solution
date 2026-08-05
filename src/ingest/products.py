@@ -51,7 +51,6 @@ def ingest_products(
             params=(watermark,),
         )
 
-        print("===***DATA WHEN READ IN***===\n", df.head())
     finally:
         conn.close()
 

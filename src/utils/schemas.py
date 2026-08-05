@@ -57,6 +57,7 @@ class CustomerRow(BaseModel):
     country: str
     signup_date: date
     tier: Optional[str] = "standard"
+    past_addresses: Optional[list] = []
 
     # • Validate email contains @ symbol (basic format check)
     # • Normalize email to lowercase for consistency
