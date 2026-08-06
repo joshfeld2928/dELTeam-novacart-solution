@@ -2,6 +2,8 @@
 from __future__ import annotations
 import argparse
 import logging
+import urllib.parse
+import webbrowser
 from pathlib import Path
 from datetime import datetime, timedelta
 import pandas as pd
@@ -119,13 +121,24 @@ def plot_row_counts(df: pd.DataFrame, output_path: Path | None = None, show: boo
         
         # Check if below 30% of floor(average) threshold and print warning
         if row["row_count"] < threshold:
-            print("\n" + "=" * 50)
-            print("⚠️  WARNING: ORDER BELOW 30% OF 7-DAY AVERAGE")
-            print("=" * 50)
-            print(f"Date: {row['date']}")
-            print(f"Num Orders: {row['row_count']}")
-            print(f"Threshold: {threshold:.1f} (30% of floor({avg:.2f}) = 30% of {floor_avg})")
-            print("=" * 50 + "\n")
+            warning_lines = [
+                "=" * 50,
+                "WARNING: ORDER BELOW 30% OF 7-DAY AVERAGE",
+                "=" * 50,
+                f"Date: {row['date']}",
+                f"Num Orders: {row['row_count']}",
+                f"Threshold: {threshold:.1f} (30% of floor({avg:.2f}) = 30% of {floor_avg})",
+                "=" * 50,
+            ]
+            warning_message = "\n".join(warning_lines)
+            print("\n⚠️  " + warning_message + "\n")
+
+            mailto_url = (
+                "mailto:Joshua.Feld@ibm.com"
+                "?subject=" + urllib.parse.quote("WARNING: Order Below 30% of 7-Day Average")
+                + "&body=" + urllib.parse.quote(warning_message)
+            )
+            webbrowser.open(mailto_url)
     
     # Add average line in custom red color
     plt.axhline(y=avg, color='#FF6B6B', linestyle='--', linewidth=2, 
