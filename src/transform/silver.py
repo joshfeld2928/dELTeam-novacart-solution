@@ -12,6 +12,10 @@ from src.utils.logging_setup import log_event
 from src.utils.schemas import OrderRow, CustomerRow, ProductRow
 
 
+class QuarantineThresholdError(RuntimeError):
+    """Raised when quarantined rows exceed the configured percentage."""
+
+
 def _validate_df(
     df: pd.DataFrame,
     model: Type[BaseModel],
@@ -19,6 +23,7 @@ def _validate_df(
     quarantine_path: Path,
     logger: logging.Logger,
     source_name: str,
+    max_quarantine_pct: float = 10.0,
 ) -> pd.DataFrame:
     """Validate each row with Pydantic. Good rows → Silver, bad rows → quarantine."""
     good, bad = [], []
@@ -39,6 +44,13 @@ def _validate_df(
         pd.DataFrame(bad).to_parquet(q_dir / f"{ts}.parquet", index=False)
         log_event(logger, "WARNING", f"{source_name}_quarantined", count=len(bad))
 
+        pct = len(bad) / len(df) * 100
+        if pct > max_quarantine_pct:
+            raise QuarantineThresholdError(
+                f"{source_name}: {len(bad)}/{len(df)} rows quarantined "
+                f"({pct:.1f}% > limit {max_quarantine_pct}%)"
+            )
+
     result = pd.DataFrame(good) if good else pd.DataFrame(columns=df.columns)
 
     # Deduplicate on primary key — keep last occurrence
@@ -58,6 +70,7 @@ def build_silver_orders(
     silver_dir: Path,
     quarantine_dir: Path,
     logger: logging.Logger,
+    silver_cfg: dict | None = None,
 ) -> Path:
     src = bronze_dir / "orders" / f"date={date_str}" / "data.parquet"
     if not src.exists():
@@ -65,7 +78,8 @@ def build_silver_orders(
         return silver_dir / "orders" / f"date={date_str}" / "data.parquet"
 
     df = pd.read_parquet(src)
-    df = _validate_df(df, OrderRow, "order_id", quarantine_dir, logger, "orders")
+    df = _validate_df(df, OrderRow, "order_id", quarantine_dir, logger, "orders",
+                      (silver_cfg or {}).get("max_quarantine_pct", 10.0))
 
     out_dir = silver_dir / "orders" / f"date={date_str}"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -80,6 +94,7 @@ def build_silver_customers(
     silver_dir: Path,
     quarantine_dir: Path,
     logger: logging.Logger,
+    silver_cfg: dict | None = None,
 ) -> Path:
     src = bronze_dir / "customers" / "data.parquet"
     if not src.exists():
@@ -87,8 +102,8 @@ def build_silver_customers(
         return silver_dir / "customers" / "data.parquet"
 
     df = pd.read_parquet(src)
-    df = _validate_df(df, CustomerRow, "customer_id", quarantine_dir, logger, "customers")
-
+    df = _validate_df(df, CustomerRow, "customer_id", quarantine_dir, logger, "customers",
+                      (silver_cfg or {}).get("max_quarantine_pct", 10.0))
     out_dir = silver_dir / "customers"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "data.parquet"
@@ -102,6 +117,7 @@ def build_silver_products(
     silver_dir: Path,
     quarantine_dir: Path,
     logger: logging.Logger,
+    silver_cfg: dict | None = None,
 ) -> Path:
     src = bronze_dir / "products" / "data.parquet"
     if not src.exists():
@@ -112,8 +128,8 @@ def build_silver_products(
     if df.empty:
         return silver_dir / "products" / "data.parquet"
 
-    df = _validate_df(df, ProductRow, "product_id", quarantine_dir, logger, "products")
-
+    df = _validate_df(df, ProductRow, "product_id", quarantine_dir, logger, "products",
+                      (silver_cfg or {}).get("max_quarantine_pct", 10.0))
     out_dir = silver_dir / "products"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "data.parquet"

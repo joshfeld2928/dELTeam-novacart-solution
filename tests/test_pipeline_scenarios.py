@@ -83,6 +83,7 @@ def test_duplicates_keep_last_value(config: Config):
 # ── Scenario 3: Bad data → quarantine ────────────────────────────────────────
 
 def test_bad_rows_quarantined(config: Config):
+    config._raw["silver"]["max_quarantine_pct"] = 100.0  # disable threshold for this test
     write_orders_csv(config.landing_orders, DATE, [
         ["ORD-001","CUST-001","PROD-001",DATE,"2","49.99","shipped"],  # good
         ["ORD-002","CUST-001","PROD-001",DATE,"0","49.99","shipped"],  # bad qty
@@ -98,6 +99,7 @@ def test_bad_rows_quarantined(config: Config):
 
 
 def test_bad_rows_dont_reach_gold(config: Config):
+    config._raw["silver"]["max_quarantine_pct"] = 100.0  # disable threshold for this test
     write_orders_csv(config.landing_orders, DATE, [
         ["ORD-001","CUST-001","PROD-001",DATE,"2","49.99","shipped"],
         ["ORD-002","CUST-001","PROD-001",DATE,"-1","49.99","shipped"],  # negative qty
@@ -108,6 +110,21 @@ def test_bad_rows_dont_reach_gold(config: Config):
     run_one_date(DATE, config)
     fact = pd.read_parquet(config.gold / "fact_orders" / f"date={DATE}" / "data.parquet")
     assert len(fact) == 1
+
+
+def test_quarantine_threshold_exceeded_fails(config: Config):
+    """Pipeline must fail when quarantined % exceeds max_quarantine_pct."""
+    config._raw["silver"]["max_quarantine_pct"] = 0.0  # zero tolerance
+    write_orders_csv(config.landing_orders, DATE, [
+        ["ORD-001","CUST-001","PROD-001",DATE,"2","49.99","shipped"],  # good
+        ["ORD-002","CUST-001","PROD-001",DATE,"0","49.99","shipped"],  # bad qty
+    ])
+    write_customers_json(config.landing_customers, [GOOD_CUSTOMER])
+    make_products_db(config.landing_products_db, [GOOD_PRODUCT])
+
+    result = run_one_date(DATE, config)
+    assert result["status"] == "FAIL"
+    assert "quarantine" in result["error"].lower()
 
 
 # ── Scenario 4: Additive schema drift ────────────────────────────────────────

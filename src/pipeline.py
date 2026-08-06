@@ -7,6 +7,7 @@ Usage:
 from __future__ import annotations
 import argparse
 import sys
+import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -42,6 +43,8 @@ def run_one_date(date_str: str, config: Config) -> dict:
                            "duration_sec": (datetime.utcnow() - t0).total_seconds()})
         except Exception as exc:
             stages.append({"stage": name, "status": "FAIL", "error": str(exc),
+                            "error_type": type(exc).__name__,
+                            "traceback": traceback.format_exc(),
                            "duration_sec": (datetime.utcnow() - t0).total_seconds()})
             raise
 
@@ -57,11 +60,11 @@ def run_one_date(date_str: str, config: Config) -> dict:
 
         # ── Silver ────────────────────────────────────────────────────────────
         stage("silver_orders",    lambda: build_silver_orders(
-            date_str, config.bronze, config.silver, config.quarantine, logger))
+            date_str, config.bronze, config.silver, config.quarantine, logger, config.silver_cfg))
         stage("silver_customers", lambda: build_silver_customers(
-            config.bronze, config.silver, config.quarantine, logger))
+            config.bronze, config.silver, config.quarantine, logger, config.silver_cfg))
         stage("silver_products",  lambda: build_silver_products(
-            config.bronze, config.silver, config.quarantine, logger))
+            config.bronze, config.silver, config.quarantine, logger, config.silver_cfg))
 
         # ── Gold ──────────────────────────────────────────────────────────────
         stage("dim_product",   lambda: build_dim_product(
