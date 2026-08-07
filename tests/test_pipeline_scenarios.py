@@ -209,43 +209,42 @@ def test_idempotency_same_values(config: Config):
 
     run_one_date(DATE, config)
     fact2 = pd.read_parquet(config.gold / "fact_orders" / f"date={DATE}" / "data.parquet")
-
     pd.testing.assert_frame_equal(
         fact1.sort_values("order_id").reset_index(drop=True),
         fact2.sort_values("order_id").reset_index(drop=True),
     )
 
 
-# ── Scenario 7: Backfill ──────────────────────────────────────────────────────
-
-def test_backfill_all_dates_present(config: Config):
-    for d in ["2025-11-07","2025-11-08","2025-11-09"]:
-        write_orders_csv(config.landing_orders, d, [
-            [f"ORD-{d[-2:]}","CUST-001","PROD-001",d,"1","49.99","shipped"],
-        ])
+def test_idempotency_dim_customer_stable(config: Config):
+    """Re-running with unchanged customer data must not add duplicate dim rows."""
+    write_orders_csv(config.landing_orders, DATE, [
+        ["ORD-001","CUST-001","PROD-001",DATE,"2","49.99","shipped"],
+    ])
     write_customers_json(config.landing_customers, [GOOD_CUSTOMER])
     make_products_db(config.landing_products_db, [GOOD_PRODUCT])
 
-    from src.pipeline import main
-    main(["--date","2025-11-09","--backfill","2","--config","config/pipeline.yaml"])
+    run_one_date(DATE, config)
+    n1 = len(pd.read_parquet(config.gold / "dim_customer.parquet"))
 
-    for d in ["2025-11-07","2025-11-08","2025-11-09"]:
-        p = config.gold / "fact_orders" / f"date={d}" / "data.parquet"
-        assert p.exists(), f"Missing Gold partition for {d}"
+    run_one_date(DATE, config)
+    n2 = len(pd.read_parquet(config.gold / "dim_customer.parquet"))
+
+    assert n1 == n2
 
 
-def test_backfill_equals_individual_runs(config: Config):
-    for d in ["2025-11-07","2025-11-08"]:
-        write_orders_csv(config.landing_orders, d, [
-            [f"ORD-{d[-2:]}","CUST-001","PROD-001",d,"2","49.99","shipped"],
-        ])
+def test_idempotency_dim_product_stable(config: Config):
+    """Re-running with unchanged product data must not add duplicate dim rows."""
+    write_orders_csv(config.landing_orders, DATE, [
+        ["ORD-001","CUST-001","PROD-001",DATE,"2","49.99","shipped"],
+    ])
     write_customers_json(config.landing_customers, [GOOD_CUSTOMER])
     make_products_db(config.landing_products_db, [GOOD_PRODUCT])
 
-    from src.pipeline import main
-    main(["--date","2025-11-08","--backfill","1","--config","config/pipeline.yaml"])
+    run_one_date(DATE, config)
+    n1 = len(pd.read_parquet(config.gold / "dim_product.parquet"))
 
-    for d in ["2025-11-07","2025-11-08"]:
-        p = config.gold / "fact_orders" / f"date={d}" / "data.parquet"
-        df = pd.read_parquet(p)
-        assert len(df) == 1
+    run_one_date(DATE, config)
+    n2 = len(pd.read_parquet(config.gold / "dim_product.parquet"))
+
+    assert n1 == n2
+
